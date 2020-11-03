@@ -33,7 +33,6 @@ stop(){
 }
 
 send(){
-  pkill -f "$0 send"
   powerW=`tail -f -n 0 "$logfile" | \
     grep -m 1 '瞬時電力計測値' | \
     awk -F '[:\[]' '{print $2}'`
@@ -43,6 +42,7 @@ send(){
     -k "$zabbix_key" \
     -o "$powerW"
   echo '' > "$logfile"
+  pkill -f "$0 send"
 }
 
 if [[ "$1" = 'start' ]]; then
