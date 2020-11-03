@@ -33,6 +33,7 @@ stop(){
 }
 
 send(){
+  pkill -f "$0 send"
   powerW=`tail -f -n 0 "$logfile" | \
     grep -m 1 '瞬時電力計測値' | \
     awk -F '[:\[]' '{print $2}'`
