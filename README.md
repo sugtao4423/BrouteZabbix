@@ -16,15 +16,15 @@ Pythonスクリプトを使わせていただきました！
 ## script.sh
 #### start
 ```
-./script start
+./script.sh start
 ```
 
 #### stop
 ```
-./script stop
+./script.sh stop
 ```
 
 #### send zabbix
 ```
-./script send
+./script.sh send
 ```
