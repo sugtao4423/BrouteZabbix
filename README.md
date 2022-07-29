@@ -1,30 +1,26 @@
 # BrouteZabbix
-`RL7023 Stick-D/IPS`を使ってBルートで電力使用量を取得  
-そしてZabbixへ送信
+Bルートから電力使用量を取得してZabbixへ送信
 
-Pythonスクリプトを使わせていただきました！  
-[スマートメーターの情報を最安ハードウェアで引っこ抜く - Qiita](https://qiita.com/rukihena/items/82266ed3a43e4b652adb)
+## Usage
+option | description | default
+--- | --- | ---
+`-device` | RL7023 device | `/dev/ttyUSB0`
+`-bId` | BルートID |
+`-bPass` | Bルートパスワード |
+`-checkInterval` | 定期チェック間隔(秒) | `60`
+`-zabbixSenderPath` | ZabbixSenderパス | `zabbix_sender`
+`-zabbixServerHost` | ZabbixServerホスト |
+`-zabbixServerPort` | ZabbixServerホストポート | `10051`
+`-zbxItemHostname` | ZabbixHostname |
+`-zbxItemKey` | ZabbixHostKey |
 
-## conf
-そんなものはない  
-スクリプト書き換えてね
+## Build
+For Raspberry PI 3
 
-* `broute.py`
-    - `rbid`
-    - `rbpwd`
-
-## script.sh
-#### start
 ```
-./script.sh start
-```
-
-#### stop
-```
-./script.sh stop
+GOOS=linux GOARCH=arm GOARM=7 go build
 ```
 
-#### send zabbix
-```
-./script.sh send
-```
+## Refs
+* [スマートメーターの情報を最安ハードウェアで引っこ抜く - Qiita](https://qiita.com/rukihena/items/82266ed3a43e4b652adb)
+* [higebu/wattmonitor](https://github.com/higebu/wattmonitor)
