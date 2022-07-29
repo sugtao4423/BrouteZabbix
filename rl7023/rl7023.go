@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"go.bug.st/serial"
 )
@@ -22,6 +23,13 @@ func NewRL7023(device string) *RL7023 {
 	}
 }
 
+func (rl7023 *RL7023) setTimeout(sec int) {
+	err := rl7023.Port.SetReadTimeout(time.Duration(sec) * time.Second)
+	if err != nil {
+		log.Fatalln("Error setting read timeout:", err)
+	}
+}
+
 func (rl7023 *RL7023) Connect() error {
 	mode := &serial.Mode{
 		BaudRate: rl7023.Baudrate,
@@ -31,6 +39,7 @@ func (rl7023 *RL7023) Connect() error {
 		return err
 	}
 	rl7023.Port = port
+	rl7023.setTimeout(30)
 	return nil
 }
 
@@ -177,6 +186,8 @@ func (rl7023 *RL7023) SKJOIN(ipv6Addr string) error {
 			break
 		}
 	}
+
+	rl7023.setTimeout(2)
 	if scanner.Scan() {
 		log.Println(scanner.Text())
 	}
@@ -184,6 +195,8 @@ func (rl7023 *RL7023) SKJOIN(ipv6Addr string) error {
 }
 
 func (rl7023 *RL7023) SKSENDTO(handle string, ipAddr string, port string, sec string, data []byte) (string, error) {
+	rl7023.setTimeout(2)
+
 	base := fmt.Sprintf("SKSENDTO %s %s %s %s %.4X ", handle, ipAddr, port, sec, len(data))
 	cmd := append([]byte(base), data[:]...)
 	cmd = append(cmd, []byte("\r\n")[:]...)
