@@ -3,12 +3,12 @@ package main
 import (
 	"errors"
 	"flag"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/sugtao4423/BrouteZabbix/log"
 	"github.com/sugtao4423/BrouteZabbix/rl7023"
 	"github.com/sugtao4423/BrouteZabbix/zabbix_sender"
 )
@@ -38,33 +38,33 @@ func main() {
 	rl7023 := rl7023.NewRL7023(*device)
 	zbxSender := zabbix_sender.NewZabbixSender(*zabbixSenderPath, *zabbixServerHost, *zabbixServerPort)
 
-	log.Println("> Initializing RL7023")
+	log.Info("Initializing RL7023")
 	ipv6Addr := initRL7023(&rl7023, *brouteId, *broutePass)
 	defer rl7023.Close()
-	log.Println("> RL7023 initialized")
+	log.Info("RL7023 initialized")
 
-	log.Println("> Start checking")
+	log.Info("Start checking")
 	frame := []byte{0x10, 0x81, 0x00, 0x01, 0x05, 0xFF, 0x01, 0x02, 0x88, 0x01, 0x62, 0x01, 0xE7, 0x00}
 	for {
 		erxudp, err := rl7023.SKSENDTO("1", ipv6Addr, "0E1A", "1", frame)
 		if err != nil {
-			log.Println(err)
+			log.Error(err)
 			time.Sleep(time.Second * time.Duration(*checkInterval/4))
 			continue
 		}
 		watt, err := getWatt(erxudp)
 		if err != nil {
-			log.Println(err)
+			log.Error(err)
 			time.Sleep(time.Second * time.Duration(*checkInterval/4))
 			continue
 		}
-		log.Printf("> 瞬時電力計測値: %sW", watt)
+		log.Infof("瞬時電力計測値: %sW", watt)
 
 		res, err := zbxSender.Send(*zbxItemHostname, *zbxItemKey, watt)
 		if err != nil {
-			log.Println(err)
+			log.Error(err)
 		}
-		log.Println(res)
+		log.Debug(res)
 
 		time.Sleep(time.Second * time.Duration(*checkInterval))
 	}
@@ -75,94 +75,94 @@ func initRL7023(device **rl7023.RL7023, brouteId string, broutePass string) stri
 	rl7023 := *device
 
 	// Connect
-	log.Println("> Connecting to RL7023")
+	log.Info("Connecting to RL7023")
 	err := rl7023.Connect()
 	if err != nil {
-		log.Fatalln("Error connecting to serial device.")
-		log.Fatalln("Exiting...")
+		log.Error("Error connecting to serial device.")
+		log.Error("Exiting...")
 		os.Exit(1)
 	}
-	log.Println("> Connected to device")
+	log.Info("Connected to device")
 
 	// SKVER
-	log.Println("> Getting device version")
+	log.Info("Getting device version")
 	err = rl7023.SKVER()
 	if err != nil {
-		log.Fatalln("Error getting device version.")
-		log.Fatalln("Exiting...")
+		log.Error("Error getting device version.")
+		log.Error("Exiting...")
 		os.Exit(1)
 	}
-	log.Println("> Device version retrieved")
+	log.Info("Device version retrieved")
 
 	// SKSETPWD
-	log.Println("> Setting B route password")
+	log.Info("Setting B route password")
 	err = rl7023.SKSETPWD(broutePass)
 	if err != nil {
-		log.Fatalln("Error setting B route password.")
-		log.Fatalln("Exiting...")
+		log.Error("Error setting B route password.")
+		log.Error("Exiting...")
 		os.Exit(1)
 	}
-	log.Println("> B route password set")
+	log.Info("B route password set")
 
 	// SKSETRBID
-	log.Println("> Setting B route ID")
+	log.Info("Setting B route ID")
 	err = rl7023.SKSETRBID(brouteId)
 	if err != nil {
-		log.Fatalln("Error setting B route ID.")
-		log.Fatalln("Exiting...")
+		log.Error("Error setting B route ID.")
+		log.Error("Exiting...")
 		os.Exit(1)
 	}
-	log.Println("> B route ID set")
+	log.Info("B route ID set")
 
 	// SKSCAN
-	log.Println("> Scanning for PAN")
+	log.Info("Scanning for PAN")
 	pan, err := rl7023.SKSCAN()
 	if err != nil {
-		log.Fatalln("Error scanning for PAN.")
-		log.Fatalln("Exiting...")
+		log.Error("Error scanning for PAN.")
+		log.Error("Exiting...")
 		os.Exit(1)
 	}
-	log.Println("> PAN scanned")
+	log.Info("PAN scanned")
 
 	// SKSREG S2 Channel
-	log.Println("> Setting S2 Channel")
+	log.Info("Setting S2 Channel")
 	err = rl7023.SKSREG("S2", pan.Channel)
 	if err != nil {
-		log.Fatalln("Error setting S2.")
-		log.Fatalln("Exiting...")
+		log.Error("Error setting S2.")
+		log.Error("Exiting...")
 		os.Exit(1)
 	}
-	log.Println("> S2 Channel set")
+	log.Info("S2 Channel set")
 
 	// SKSREG S3 PanId
-	log.Println("> Setting S3 PanId")
+	log.Info("Setting S3 PanId")
 	err = rl7023.SKSREG("S3", pan.PanId)
 	if err != nil {
-		log.Fatalln("Error setting S3.")
-		log.Fatalln("Exiting...")
+		log.Error("Error setting S3.")
+		log.Error("Exiting...")
 		os.Exit(1)
 	}
-	log.Println("> S3 PanId set")
+	log.Info("S3 PanId set")
 
 	// SKLL64
-	log.Println("> Getting IPv6 address")
+	log.Info("Getting IPv6 address")
 	ipv6Addr, err := rl7023.SKLL64(pan.Addr)
 	if err != nil {
-		log.Fatalln("Error getting IPv6 address.")
-		log.Fatalln("Exiting...")
+		log.Error("Error getting IPv6 address.")
+		log.Error("Exiting...")
 		os.Exit(1)
 	}
-	log.Println("> IPv6 address retrieved")
+	log.Info("IPv6 address retrieved")
 
 	// SKJOIN
-	log.Println("> Start SKJOIN")
+	log.Info("Start SKJOIN")
 	err = rl7023.SKJOIN(ipv6Addr)
 	if err != nil {
-		log.Fatalln("Error SKJOIN.")
-		log.Fatalln("Exiting...")
+		log.Error("Error SKJOIN.")
+		log.Error("Exiting...")
 		os.Exit(1)
 	}
-	log.Println("> SKJOIN finished")
+	log.Info("SKJOIN finished")
 
 	return ipv6Addr
 }
@@ -177,7 +177,7 @@ func getWatt(erxudp string) (string, error) {
 		if epc == "E7" {
 			watt, err := strconv.ParseUint(res[len(res)-8:], 16, 0)
 			if err != nil {
-				log.Println(err)
+				return "", err
 			}
 			return strconv.FormatUint(watt, 10), nil
 		}

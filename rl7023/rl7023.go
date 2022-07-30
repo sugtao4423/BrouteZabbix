@@ -3,10 +3,10 @@ package rl7023
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
+	"github.com/sugtao4423/BrouteZabbix/log"
 	"go.bug.st/serial"
 )
 
@@ -26,7 +26,7 @@ func NewRL7023(device string) *RL7023 {
 func (rl7023 *RL7023) setTimeout(sec int) {
 	err := rl7023.Port.SetReadTimeout(time.Duration(sec) * time.Second)
 	if err != nil {
-		log.Fatalln("Error setting read timeout:", err)
+		log.Error("Error setting read timeout:", err)
 	}
 }
 
@@ -51,14 +51,14 @@ func (rl7023 *RL7023) write(s string) error {
 	return nil
 }
 
-// includes `log.Println`
+// includes `log.Debug`
 func (rl7023 *RL7023) readLinesUntilOK() []string {
 	reader := bufio.NewReader(rl7023.Port)
 	scanner := bufio.NewScanner(reader)
 	var lines []string
 	for scanner.Scan() {
 		line := scanner.Text()
-		log.Println(line)
+		log.Debug(line)
 		lines = append(lines, line)
 		if line == "OK" {
 			break
@@ -109,7 +109,7 @@ func (rl7023 *RL7023) SKSCAN() (*PAN, error) {
 	pan := &PAN{}
 	for scanner.Scan() {
 		line := scanner.Text()
-		log.Println(line)
+		log.Debug(line)
 		s := strings.TrimSpace(line)
 		switch {
 		case strings.HasPrefix(s, "Channel:"):
@@ -162,7 +162,7 @@ func (rl7023 *RL7023) SKLL64(addr string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		log.Println(string(line))
+		log.Debug(string(line))
 		lines = append(lines, string(line))
 	}
 	return lines[1], nil
@@ -179,7 +179,7 @@ func (rl7023 *RL7023) SKJOIN(ipv6Addr string) error {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
-		log.Println(line)
+		log.Debug(line)
 		if strings.HasPrefix(line, "EVENT 24") {
 			return fmt.Errorf("SKJOIN failed. %s", line)
 		} else if strings.HasPrefix(line, "EVENT 25") {
@@ -189,7 +189,7 @@ func (rl7023 *RL7023) SKJOIN(ipv6Addr string) error {
 
 	rl7023.setTimeout(2)
 	if scanner.Scan() {
-		log.Println(scanner.Text())
+		log.Debug(scanner.Text())
 	}
 	return nil
 }
@@ -212,7 +212,7 @@ func (rl7023 *RL7023) SKSENDTO(handle string, ipAddr string, port string, sec st
 		if err != nil {
 			return "", err
 		}
-		log.Println(string(line))
+		log.Debug(string(line))
 		lines = append(lines, string(line))
 	}
 
