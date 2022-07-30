@@ -49,13 +49,13 @@ func main() {
 		erxudp, err := rl7023.SKSENDTO("1", ipv6Addr, "0E1A", "1", frame)
 		if err != nil {
 			log.Println(err)
-			time.Sleep(time.Second * time.Duration(*checkInterval))
+			time.Sleep(time.Second * time.Duration(*checkInterval/4))
 			continue
 		}
 		watt, err := getWatt(erxudp)
 		if err != nil {
 			log.Println(err)
-			time.Sleep(time.Second * time.Duration(*checkInterval))
+			time.Sleep(time.Second * time.Duration(*checkInterval/4))
 			continue
 		}
 		log.Printf("> 瞬時電力計測値: %sW", watt)
