@@ -1,7 +1,6 @@
 package rl7023
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 	"time"
@@ -13,67 +12,13 @@ import (
 type RL7023 struct {
 	Baudrate     int
 	SerialDevice string
-	Port         serial.Port
-	lastBuff     []byte
-	timeout      time.Duration
+	Port         Port
 }
 
 func NewRL7023(device string) *RL7023 {
 	return &RL7023{
 		Baudrate:     115200,
 		SerialDevice: device,
-		lastBuff:     []byte{},
-		timeout:      time.Duration(30) * time.Second,
-	}
-}
-
-func (rl7023 *RL7023) setTimeout(sec int) {
-	rl7023.timeout = time.Duration(sec) * time.Second
-}
-
-func (rl7023 *RL7023) readLine() string {
-	findLine := func() (bool, string) {
-		nIndex := bytes.Index(rl7023.lastBuff, []byte("\n"))
-		if nIndex != -1 {
-			line := string(rl7023.lastBuff[:nIndex])
-			line = strings.TrimSuffix(line, "\r")
-			if len(rl7023.lastBuff) > nIndex+1 {
-				rl7023.lastBuff = rl7023.lastBuff[nIndex+1:]
-			} else {
-				rl7023.lastBuff = []byte{}
-			}
-			return true, line
-		}
-		return false, ""
-	}
-
-	found, line := findLine()
-	if found {
-		return line
-	}
-
-	err := rl7023.Port.SetReadTimeout(time.Duration(2) * time.Second)
-	if err != nil {
-		log.Error("Error setting read timeout:", err)
-	}
-
-	deadline := time.Now().Add(rl7023.timeout)
-	buff := make([]byte, 100)
-	for {
-		if time.Now().After(deadline) {
-			log.Warn("Timeout reading line")
-			return ""
-		}
-		n, err := rl7023.Port.Read(buff)
-		if err != nil {
-			log.Error("Error reading line:", err)
-			continue
-		}
-		rl7023.lastBuff = append(rl7023.lastBuff, buff[:n]...)
-		found, line = findLine()
-		if found {
-			return line
-		}
 	}
 }
 
@@ -85,8 +30,9 @@ func (rl7023 *RL7023) Connect() error {
 	if err != nil {
 		return err
 	}
-	rl7023.Port = port
-	rl7023.setTimeout(30)
+	rl7023.Port = *NewPort(port)
+	rl7023.Port.SetReadTimeout(time.Duration(2) * time.Second)
+	rl7023.Port.SetReadLineTimeout(time.Duration(30) * time.Second)
 	return nil
 }
 
@@ -96,6 +42,10 @@ func (rl7023 *RL7023) write(s string) error {
 		return err
 	}
 	return nil
+}
+
+func (rl7023 *RL7023) readLine() string {
+	return rl7023.Port.ReadLine()
 }
 
 // includes `log.Debug`
@@ -223,14 +173,14 @@ func (rl7023 *RL7023) SKJOIN(ipv6Addr string) error {
 		}
 	}
 
-	rl7023.setTimeout(2)
+	rl7023.Port.SetReadLineTimeout(time.Duration(2) * time.Second)
 	line := rl7023.readLine()
 	log.Debug(line)
 	return nil
 }
 
 func (rl7023 *RL7023) SKSENDTO(handle string, ipAddr string, port string, sec string, data []byte) (string, error) {
-	rl7023.setTimeout(2)
+	rl7023.Port.SetReadLineTimeout(time.Duration(2) * time.Second)
 
 	base := fmt.Sprintf("SKSENDTO %s %s %s %s %.4X ", handle, ipAddr, port, sec, len(data))
 	cmd := append([]byte(base), data[:]...)
