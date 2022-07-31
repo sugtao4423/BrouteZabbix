@@ -1,7 +1,7 @@
 package rl7023
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
 	"strings"
 	"time"
@@ -14,19 +14,66 @@ type RL7023 struct {
 	Baudrate     int
 	SerialDevice string
 	Port         serial.Port
+	lastBuff     []byte
+	timeout      time.Duration
 }
 
 func NewRL7023(device string) *RL7023 {
 	return &RL7023{
 		Baudrate:     115200,
 		SerialDevice: device,
+		lastBuff:     []byte{},
+		timeout:      time.Duration(30) * time.Second,
 	}
 }
 
 func (rl7023 *RL7023) setTimeout(sec int) {
-	err := rl7023.Port.SetReadTimeout(time.Duration(sec) * time.Second)
+	rl7023.timeout = time.Duration(sec) * time.Second
+}
+
+func (rl7023 *RL7023) readLine() string {
+	findLine := func() (bool, string) {
+		nIndex := bytes.Index(rl7023.lastBuff, []byte("\n"))
+		if nIndex != -1 {
+			line := string(rl7023.lastBuff[:nIndex])
+			line = strings.TrimSuffix(line, "\r")
+			if len(rl7023.lastBuff) > nIndex+1 {
+				rl7023.lastBuff = rl7023.lastBuff[nIndex+1:]
+			} else {
+				rl7023.lastBuff = []byte{}
+			}
+			return true, line
+		}
+		return false, ""
+	}
+
+	found, line := findLine()
+	if found {
+		return line
+	}
+
+	err := rl7023.Port.SetReadTimeout(time.Duration(2) * time.Second)
 	if err != nil {
 		log.Error("Error setting read timeout:", err)
+	}
+
+	deadline := time.Now().Add(rl7023.timeout)
+	buff := make([]byte, 100)
+	for {
+		if time.Now().After(deadline) {
+			log.Warn("Timeout reading line")
+			return ""
+		}
+		n, err := rl7023.Port.Read(buff)
+		if err != nil {
+			log.Error("Error reading line:", err)
+			continue
+		}
+		rl7023.lastBuff = append(rl7023.lastBuff, buff[:n]...)
+		found, line = findLine()
+		if found {
+			return line
+		}
 	}
 }
 
@@ -53,18 +100,15 @@ func (rl7023 *RL7023) write(s string) error {
 
 // includes `log.Debug`
 func (rl7023 *RL7023) readLinesUntilOK() []string {
-	reader := bufio.NewReader(rl7023.Port)
-	scanner := bufio.NewScanner(reader)
 	var lines []string
-	for scanner.Scan() {
-		line := scanner.Text()
+	for {
+		line := rl7023.readLine()
 		log.Debug(line)
 		lines = append(lines, line)
 		if line == "OK" {
-			break
+			return lines
 		}
 	}
-	return lines
 }
 
 func (rl7023 *RL7023) Close() error {
@@ -104,11 +148,9 @@ func (rl7023 *RL7023) SKSCAN() (*PAN, error) {
 		return nil, err
 	}
 
-	reader := bufio.NewReader(rl7023.Port)
-	scanner := bufio.NewScanner(reader)
 	pan := &PAN{}
-	for scanner.Scan() {
-		line := scanner.Text()
+	for {
+		line := rl7023.readLine()
 		log.Debug(line)
 		s := strings.TrimSpace(line)
 		switch {
@@ -155,13 +197,9 @@ func (rl7023 *RL7023) SKLL64(addr string) (string, error) {
 		return "", err
 	}
 
-	reader := bufio.NewReader(rl7023.Port)
 	var lines []string
 	for i := 0; i < 2; i++ {
-		line, _, err := reader.ReadLine()
-		if err != nil {
-			return "", err
-		}
+		line := rl7023.readLine()
 		log.Debug(string(line))
 		lines = append(lines, string(line))
 	}
@@ -175,10 +213,8 @@ func (rl7023 *RL7023) SKJOIN(ipv6Addr string) error {
 	}
 	rl7023.readLinesUntilOK()
 
-	reader := bufio.NewReader(rl7023.Port)
-	scanner := bufio.NewScanner(reader)
-	for scanner.Scan() {
-		line := scanner.Text()
+	for {
+		line := rl7023.readLine()
 		log.Debug(line)
 		if strings.HasPrefix(line, "EVENT 24") {
 			return fmt.Errorf("SKJOIN failed. %s", line)
@@ -188,9 +224,8 @@ func (rl7023 *RL7023) SKJOIN(ipv6Addr string) error {
 	}
 
 	rl7023.setTimeout(2)
-	if scanner.Scan() {
-		log.Debug(scanner.Text())
-	}
+	line := rl7023.readLine()
+	log.Debug(line)
 	return nil
 }
 
@@ -205,13 +240,9 @@ func (rl7023 *RL7023) SKSENDTO(handle string, ipAddr string, port string, sec st
 		return "", err
 	}
 
-	reader := bufio.NewReader(rl7023.Port)
 	var lines []string
 	for i := 0; i < 5; i++ {
-		line, _, err := reader.ReadLine()
-		if err != nil {
-			return "", err
-		}
+		line := rl7023.readLine()
 		log.Debug(string(line))
 		lines = append(lines, string(line))
 	}
