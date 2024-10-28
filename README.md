@@ -13,10 +13,31 @@ option | description | default
 `-zbxItemKey` | ZabbixHostKey |
 
 ## Build
-For Raspberry PI 3
+For Raspberry Pi 3
 
 ```
 GOOS=linux GOARCH=arm GOARM=7 go build
+```
+
+## systemd
+```
+# /etc/systemd/system/BrouteZabbix.service
+[Unit]
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/path/to/BrouteZabbix \
+            -bId BROUTE_ID \
+            -bPass BROUTE_PASS \
+            -zabbixServerHost ZABBIX_SERVER:10051 \
+            -zbxItemHostname ZABBIX_ITEM_HOSTNAME \
+            -zbxItemKey ZABBIX_ITEM_KEY
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
 ```
 
 ## Refs
