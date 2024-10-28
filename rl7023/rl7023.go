@@ -65,6 +65,15 @@ func (rl7023 *RL7023) Close() error {
 	return rl7023.Port.Close()
 }
 
+func (rl7023 *RL7023) SKRESET() error {
+	err := rl7023.write("SKRESET\r\n")
+	if err != nil {
+		return err
+	}
+	rl7023.readLinesUntilOK()
+	return nil
+}
+
 func (rl7023 *RL7023) SKVER() error {
 	err := rl7023.write("SKVER\r\n")
 	if err != nil {

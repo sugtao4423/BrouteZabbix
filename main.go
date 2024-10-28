@@ -84,6 +84,16 @@ func initRL7023(device **rl7023.RL7023, brouteId string, broutePass string) stri
 	}
 	log.Info("Connected to device")
 
+	// SKRESET
+	log.Info("Resetting device")
+	err = rl7023.SKRESET()
+	if err != nil {
+		log.Error("Error resetting device.")
+		log.Error("Exiting...")
+		os.Exit(1)
+	}
+	log.Info("Device reset")
+
 	// SKVER
 	log.Info("Getting device version")
 	err = rl7023.SKVER()
