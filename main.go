@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spetr/go-zabbix-sender"
 	"github.com/sugtao4423/BrouteZabbix/log"
 	"github.com/sugtao4423/BrouteZabbix/rl7023"
-	"github.com/sugtao4423/BrouteZabbix/zabbix_sender"
 )
 
 func main() {
@@ -18,17 +18,13 @@ func main() {
 	brouteId := flag.String("bId", "", "B route id")
 	broutePass := flag.String("bPass", "", "B route pass")
 	checkInterval := flag.Int("interval", 60, "checking interval")
-	zabbixSenderPath := flag.String("zabbixSenderPath", "zabbix_sender", "zabbix sender path")
-	zabbixServerHost := flag.String("zabbixServerHost", "", "Zabbix server host")
-	zabbixServerPort := flag.Int("zabbixServerPort", 10051, "Zabbix server port")
+	zabbixServerHost := flag.String("zabbixServerHost", "localhost:10051", "Zabbix server host")
 	zbxItemHostname := flag.String("zbxItemHostname", "", "Zabbix item hostname")
 	zbxItemKey := flag.String("zbxItemKey", "", "Zabbix item key")
 	flag.Parse()
 
 	if strings.TrimSpace(*brouteId) == "" ||
 		strings.TrimSpace(*broutePass) == "" ||
-		strings.TrimSpace(*zabbixSenderPath) == "" ||
-		strings.TrimSpace(*zabbixServerHost) == "" ||
 		strings.TrimSpace(*zbxItemHostname) == "" ||
 		strings.TrimSpace(*zbxItemKey) == "" {
 		flag.Usage()
@@ -36,7 +32,7 @@ func main() {
 	}
 
 	rl7023 := rl7023.NewRL7023(*device)
-	zbxSender := zabbix_sender.NewZabbixSender(*zabbixSenderPath, *zabbixServerHost, *zabbixServerPort)
+	zbxSender := zabbix.NewSender(*zabbixServerHost)
 
 	log.Info("Initializing RL7023")
 	ipv6Addr := initRL7023(&rl7023, *brouteId, *broutePass)
@@ -60,7 +56,10 @@ func main() {
 		}
 		log.Infof("瞬時電力計測値: %sW", watt)
 
-		res, err := zbxSender.Send(*zbxItemHostname, *zbxItemKey, watt)
+		metrics := []*zabbix.Metric{
+			zabbix.NewMetric(*zbxItemHostname, *zbxItemKey, watt, false),
+		}
+		_, _, res, err := zbxSender.SendMetrics(metrics)
 		if err != nil {
 			log.Error(err)
 		}

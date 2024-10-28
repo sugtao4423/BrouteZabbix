@@ -8,9 +8,7 @@ option | description | default
 `-bId` | BルートID |
 `-bPass` | Bルートパスワード |
 `-checkInterval` | 定期チェック間隔(秒) | `60`
-`-zabbixSenderPath` | ZabbixSenderパス | `zabbix_sender`
-`-zabbixServerHost` | ZabbixServerホスト |
-`-zabbixServerPort` | ZabbixServerホストポート | `10051`
+`-zabbixServerHost` | ZabbixServerホスト | `localhost:10051`
 `-zbxItemHostname` | ZabbixHostname |
 `-zbxItemKey` | ZabbixHostKey |
 
